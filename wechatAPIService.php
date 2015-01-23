@@ -9,20 +9,41 @@
 
 class WechatAPIService {
 
-	protected $payload = array();
+	protected $token;
+	protected $echostr;
+	protected $signature;
+	protected $timestamp;
+	protected $once;
 
 	function __construct(Array $payload)
 	{
-		$this->$payload = $payload;
+		$this->once = $payload['once'];
+		$this->token = $payload['token'];
+		$this->echostr = $payload['echostr'];
+		$this->signature = $payload['signature'];
+		$this->timestamp = $payload['timestamp'];
 	}
 
 	public function response()
 	{
-		return "call success!";
+		echo $this->echostr;
 	}
 
 	public function valid()
 	{
-		return 'valid success';
+		$token = $this->token;
+		$timestamp = $this->timestamp;
+		$once = $this->once;
+		$echostr = $this->echostr;
+		$signature = $this->signature;
+
+        $tmpArr = array($token, $timestamp, $once);
+        sort($tmpArr);
+        $tmpStr = implode($tmpArr);
+        $tmpStr = sha1($tmpStr);
+        if($tmpStr == $signature){
+            echo $echoStr;
+            exit;
+        }
 	}
 }

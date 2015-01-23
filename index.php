@@ -11,17 +11,17 @@ require 'wechatAPIService.php';
 // Get query value
 $payload = array(
 	'token' => 'ideastop',
-	'echostr' => $_GET['echostr'] | null,
-	'signature' => $_GET['signature'] | null,
-	'timestamp' => $_GET['timestamp'] | null,
-	'once' => $_GET['onec'] | null,
+	'echostr' => $_GET['echostr'],
+	'signature' => $_GET['signature'],
+	'timestamp' => $_GET['timestamp'],
+	'once' => $_GET['once'],
 );
 
 // Instantiate 
 $wechatAPIService = new wechatAPIService($payload); 
 
 // Response for request
-if( !$payload['echostr'] )
+if( $payload['echostr'] != NULL)
 {
 	$wechatAPIService->response();
 } else {
