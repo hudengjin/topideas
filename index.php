@@ -5,12 +5,11 @@
  * @author Jobslong
  * 2015/1/23
  */
-
-require 'wechatAPIService.php';
+require_once './vendor/autoload.php';
+require_once './app/wechatAPIService.php';
 
 // Get query value
 $payload = array(
-	'token' => 'ideastop',
 	'echostr' => $_GET['echostr'],
 	'signature' => $_GET['signature'],
 	'timestamp' => $_GET['timestamp'],
@@ -20,10 +19,14 @@ $payload = array(
 // Instantiate 
 $wechatAPIService = new wechatAPIService($payload); 
 
-// Response for request
-if( $payload['echostr'] != NULL)
+$wechatAPIService->getAccessToken('appid', 'appsecret');
+
+// 开发者通过检验signature对请求进行校验
+// 若确认此次GET请求来自微信服务器
+// 请原样返回echostr参数内容,则接入生效，成为开发者成功，否则接入失败
+if( $wechatAPIService->checkSignature($payload) )
 {
 	$wechatAPIService->response();
 } else {
-	$wechatAPIService->valid();
+	echo $payload['echostr'];
 }

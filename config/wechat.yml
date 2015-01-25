@@ -1,0 +1,6 @@
+base:
+  token: ideastop
+
+api:
+  access_token:
+    url: 'https://api.weixin.qq.com/cgi-bin/token'

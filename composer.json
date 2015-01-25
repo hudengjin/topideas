@@ -1,0 +1,6 @@
+{
+    "require": {
+				"puzzle/configuration" : "~1.6",
+        "guzzlehttp/guzzle": "~5.1"
+    }
+}

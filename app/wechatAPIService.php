@@ -7,22 +7,78 @@
  * 2015/1/23
  */
 
+use GuzzleHttp\Client as HttpClient;
+use Puzzle\Configuration as Config;
+use Gaufrette\Filesystem as Filesystem;
+use Gaufrette\Adapter\Local as Local;
+
 class WechatAPIService {
 
-	protected $token;
-	protected $echostr;
-	protected $signature;
-	protected $timestamp;
-	protected $once;
+    /**
+     * GuzzleHttp\Client
+     * @var $httpClient
+     */
+    protected $httpClient;
 
-	function __construct(Array $payload)
-	{
-		$this->once = $payload['once'];
-		$this->token = $payload['token'];
-		$this->echostr = $payload['echostr'];
-		$this->signature = $payload['signature'];
-		$this->timestamp = $payload['timestamp'];
-	}
+    /**
+     * Puzzle\Configuratio
+     * @var $config
+     */
+    protected $config;
+
+    public function __construct()
+    {
+        $this->httpClient = new HttpClient;
+        $fileSystem = new Filesystem(new Local(__DIR__ . '/../config'));
+        $this->config = new Puzzle\Configuration\Yaml($fileSystem);
+    }
+
+    /**
+     * 验证服务器地址的有效性
+     * 
+     * @param Array [timestamp,once,signature]
+     * @return Boolean
+     */
+    public function checkSignature(Array $paramters)
+    {
+        // 将token、timestamp、nonce三个参数进行字典序排序
+        $tmpArr = array($this->config->read('wechat/base/token'), 
+            $paramters['timestamp'], $paramters['once']);
+        sort($tmpArr, SORT_STRING);
+        $tmpStr = implode($tmpArr);
+        // 将三个参数字符串拼接成一个字符串进行sha1加密
+        $tmpStr = sha1($tmpStr);
+        // 开发者获得加密后的字符串可与signature对比，标识该请求来源于微信
+        return $tmpStr == $paramters['signature'] ? true : false;
+    }
+
+    /**
+     * 获得access_token
+     *
+     * @param String $appid
+     * @param String $appsecret
+     * @param String $grant_type | default 'client_credential'
+     * @return String
+     */
+    public function getAccessToken($appid, $appsecret, 
+        $grant_type = 'client_credential')
+    {
+        $response = $this->httpClient->get(
+            $this->config->read('wechat/api/access_token/url'), 
+            ['query' => [
+                'grant_type' => $grant_type,
+                'appid' => $appid,
+                'secret' => $appsecret
+            ]])->json();
+
+        if( isset($response['errcode']) )
+        {
+            throw new Exception($response['errcode'] 
+                . ':' . $response['errmsg']);
+        }
+
+        return $response['access_token'];
+    }
 
 	public function response()
 	{
@@ -170,22 +226,4 @@ $item_str
         $result = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time());
         return $result;
     }
-
-	public function valid()
-	{
-		$token = $this->token;
-		$timestamp = $this->timestamp;
-		$once = $this->once;
-		$echostr = $this->echostr;
-		$signature = $this->signature;
-
-        $tmpArr = array($token, $timestamp, $once);
-        sort($tmpArr);
-        $tmpStr = implode($tmpArr);
-        $tmpStr = sha1($tmpStr);
-        if($tmpStr == $signature){
-            echo $echoStr;
-            exit;
-        }
-	}
 }
