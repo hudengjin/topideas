@@ -19,8 +19,6 @@ $payload = array(
 // Instantiate 
 $wechatAPIService = new wechatAPIService($payload); 
 
-$wechatAPIService->getAccessToken('appid', 'appsecret');
-
 // 开发者通过检验signature对请求进行校验
 // 若确认此次GET请求来自微信服务器
 // 请原样返回echostr参数内容,则接入生效，成为开发者成功，否则接入失败
@@ -30,3 +28,10 @@ if( $wechatAPIService->checkSignature($payload) )
 } else {
 	echo $payload['echostr'];
 }
+
+// $media_id = $wechatAPIService->uploadMedia(
+// 	'/Users/jobslong/Workspace/wechat-php-sdk/test/data/upload_image.jpg', 
+// 	'image')['media_id'];
+// echo $media_id;
+// $content = $wechatAPIService->downloadMedia('qz6ySyMVFU4CzY-rCwPMcdlwqExLrhUoH85W4bipKuWOfXhXHjX-kKXwVS8H1IPW');
+// file_put_contents('downd_media.jpg', $content);

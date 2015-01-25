@@ -8,9 +8,12 @@
  */
 
 use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\Post\PostFile;
 use Puzzle\Configuration as Config;
 use Gaufrette\Filesystem as Filesystem;
 use Gaufrette\Adapter\Local as Local;
+use Desarrolla2\Cache\Cache;
+use Desarrolla2\Cache\Adapter\File;
 
 class WechatAPIService {
 
@@ -26,11 +29,22 @@ class WechatAPIService {
      */
     protected $config;
 
+    /**
+     * Desarrolla2\Cache\Cache
+     * @var $cache
+     */
+    protected $cache;
+
     public function __construct()
     {
         $this->httpClient = new HttpClient;
         $fileSystem = new Filesystem(new Local(__DIR__ . '/../config'));
         $this->config = new Puzzle\Configuration\Yaml($fileSystem);
+
+        $cacheDir = '/tmp';
+        $adapter = new File($cacheDir);
+        $adapter->setOption('ttl', 7200);
+        $this->cache = new Cache($adapter);
     }
 
     /**
@@ -55,29 +69,105 @@ class WechatAPIService {
     /**
      * 获得access_token
      *
-     * @param String $appid
-     * @param String $appsecret
      * @param String $grant_type | default 'client_credential'
      * @return String
      */
-    public function getAccessToken($appid, $appsecret, 
-        $grant_type = 'client_credential')
+    protected function getAccessToken($grant_type = 'client_credential')
     {
-        $response = $this->httpClient->get(
-            $this->config->read('wechat/api/access_token/url'), 
-            ['query' => [
-                'grant_type' => $grant_type,
-                'appid' => $appid,
-                'secret' => $appsecret
-            ]])->json();
+        if( !$this->cache->has('access_token') )
+        {
+            $request = $this->createRequest('access_token');
+            $query = $request->getQuery();
+            $query->set('grant_type', $grant_type);
+            $query->set('appid', $this->config->read('wechat/base/appid'));
+            $query->set('secret', $this->config->read('wechat/base/appsecret'));
+            $response = $this->httpClient->send($request)->json();
 
+            $this->checkResponse($response);
+
+            // cache access_token
+            $this->cache->set('access_token', 
+                $response['access_token'], $response['expires_in']);
+            return $response['access_token'];
+        } else {
+            return $this->cache->get('access_token');
+        }
+    }
+
+    /**
+     * 获得微信服务器IP列表
+     *
+     * @return Array IP list
+     */
+    public function getCallbackIPs()
+    {
+        $request = $this->createRequest('callback_ip');
+        $query = $this->getAuthQuery($request);
+        $response = $this->httpClient->send($request)->json();
+
+        $this->checkResponse($response);
+
+        return $response['ip_list'];
+    }
+
+    /**
+     * 上传多媒体文件
+     *
+     * 上传的多媒体文件有格式和大小限制，如下：
+     * 图片（image）: 1M，支持JPG格式
+     * 语音（voice）：2M，播放长度不超过60s，支持AMR\MP3\SPEEX格式
+     * 视频（video）：10MB，支持MP4格式
+     * 缩略图（thumb）：64KB，支持JPG格式
+     * 媒体文件在后台保存时间为3天，即3天后media_id失效
+     * @param File $media
+     * @param String $type:image|voice|video|thumb
+     * @return Response
+     */
+    public function uploadMedia($media, $type)
+    {
+        $request = $this->createRequest('upload_media');
+        $query = $this->getAuthQuery($request);
+        $query->set('type', $type);
+
+        $body = $request->getBody();
+        $body->addFile(new PostFile('test', fopen($media, 'r')));
+        $response = $this->httpClient->send($request);
+        return $response->json();
+    }
+
+    public function downloadMedia($media_id)
+    {
+        $request = $this->createRequest('download_media');
+        $query = $this->getAuthQuery($request);
+        $query->set('media_id', $media_id);
+        return $this->httpClient->send($request)->getBody();
+    }
+
+    protected function createRequest($api_name)
+    {
+        $scheme = $this->config->read('wechat/api/'. $api_name . '/scheme');
+        $method = $this->config->read('wechat/api/'. $api_name . '/method');
+        $url = $this->config->read('wechat/api/'. $api_name . '/url');
+        $request = $this->httpClient->createRequest($method, $url);
+        $request->setScheme($scheme);
+        return $request;
+    }
+
+    protected function getAuthQuery($request)
+    {
+        $query = $request->getQuery();
+        $query->set('access_token', $this->getAccessToken());
+        return $query;
+    }
+
+
+    protected function checkResponse($response)
+    {
         if( isset($response['errcode']) )
         {
             throw new Exception($response['errcode'] 
                 . ':' . $response['errmsg']);
         }
-
-        return $response['access_token'];
     }
 
 	public function response()
