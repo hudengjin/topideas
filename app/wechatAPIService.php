@@ -47,6 +47,18 @@ class WechatAPIService {
         $this->cache = new Cache($adapter);
     }
 
+    public function checkRequest(Array $payload)
+    {
+        foreach ($payload as $key => $value) 
+        {
+            if( $value == NULL )
+            {
+                echo "缺少请求参数错误![" . $key . " 不能为空]";
+                exit;
+            }
+        }
+    }
+
     /**
      * 验证服务器地址的有效性
      * 
@@ -170,34 +182,46 @@ class WechatAPIService {
         }
     }
 
-	public function response()
+	public function response($postStr)
 	{
-		$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
-        if (!empty($postStr)){
-            $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $RX_TYPE = trim($postObj->MsgType);
-             
-            //消息类型分离
-            switch ($RX_TYPE)
-            {
-                case "text":
-                    $result = $this->receiveText($postObj);
-                    break;
-                default:
-                    $result = "unknown msg type: ".$RX_TYPE;
-                    break;
-            }
-            echo $result;
-        }else {
+        $msgBody = $this->parseXMLMessage($postStr);
+
+        // dispatch message specify by messageTpye             
+        switch ($msgBody['MsgType'])
+        {
+            case "text":
+                $result = $this->receiveText($msgBody);
+                break;
+            default:
+                $result = "unknown msg type: " . $msgBody['MsgType'];
+                break;
+        }
+
+        return $result;
+	}
+
+    protected function parseXMLMessage($postStr)
+    {
+        if (!empty($postStr)) {
+            $postObj = simplexml_load_string($postStr, 
+                'SimpleXMLElement', LIBXML_NOCDATA);
+            return (Array)$postObj;
+        } else {
             echo "";
             exit;
         }
-	}
+    }
+
+    public function encryptMessage($postStr, $encrypt_type)
+    {
+        // todo
+        return $postStr;
+    }
 
 	//接收文本消息
     private function receiveText($object)
     {
-        $keyword = trim($object->Content);
+        $keyword = trim($object['Content']);
         //多客服人工回复模式
         if (strstr($keyword, "您好") || strstr($keyword, "你好") || strstr($keyword, "在吗")){
             $result = $this->transmitService($object);
@@ -218,7 +242,7 @@ class WechatAPIService {
                 $content = array();
                 $content = array("Title"=>"最炫民族风", "Description"=>"歌手：凤凰传奇", "MusicUrl"=>"http://121.199.4.61/music/zxmzf.mp3", "HQMusicUrl"=>"http://121.199.4.61/music/zxmzf.mp3");
             }else{
-                $content = date("Y-m-d H:i:s",time())."\n".$object->FromUserName."\n技术支持 方倍工作室";
+                $content = date("Y-m-d H:i:s",time())."\n".$object['FromUserName']."\n技术支持 方倍工作室";
             }
             
             if(is_array($content)){
@@ -245,7 +269,7 @@ class WechatAPIService {
 <MsgType><![CDATA[text]]></MsgType>
 <Content><![CDATA[%s]]></Content>
 </xml>";
-        $result = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time(), $content);
+        $result = sprintf($xmlTpl, $object['FromUserName'], $object['ToUserName'], time(), $content);
         return $result;
     }
 
@@ -276,7 +300,7 @@ class WechatAPIService {
 $item_str</Articles>
 </xml>";
 
-        $result = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time(), count($newsArray));
+        $result = sprintf($xmlTpl, $object['FromUserName'], $object['ToUserName'], time(), count($newsArray));
         return $result;
     }
 
@@ -300,7 +324,7 @@ $item_str</Articles>
 $item_str
 </xml>";
 
-        $result = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time());
+        $result = sprintf($xmlTpl, $object['FromUserName'], $object['ToUserName'], time());
         return $result;
     }
 
@@ -313,7 +337,7 @@ $item_str
 <CreateTime>%s</CreateTime>
 <MsgType><![CDATA[transfer_customer_service]]></MsgType>
 </xml>";
-        $result = sprintf($xmlTpl, $object->FromUserName, $object->ToUserName, time());
+        $result = sprintf($xmlTpl, $object['FromUserName'], $object['ToUserName'], time());
         return $result;
     }
 }
