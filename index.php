@@ -15,7 +15,7 @@ $payload = array(
 	'echostr' => $_GET['echostr'],
 	'signature' => $_GET['signature'],
 	'timestamp' => $_GET['timestamp'],
-	'once' => $_GET['once'],
+	'nonce' => $_GET['nonce'],
 );
 
 // Instantiate 

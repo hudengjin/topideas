@@ -1,7 +1,7 @@
 base:
   token: ideastop
-  appid: wx4f48cdcea70e8805
-  appsecret: 81c231d38a39c92564841e6ebf1d4ce9
+  appid: wxce869839c610fe60
+  appsecret: 2eb34e749b438abda9389828c44b012a
 
 api:
   # 获得 access_token

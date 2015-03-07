@@ -69,7 +69,7 @@ class WechatAPIService {
     {
         // 将token、timestamp、nonce三个参数进行字典序排序
         $tmpArr = array($this->config->read('wechat/base/token'), 
-            $paramters['timestamp'], $paramters['once']);
+            $paramters['timestamp'], $paramters['nonce']);
         sort($tmpArr, SORT_STRING);
         $tmpStr = implode($tmpArr);
         // 将三个参数字符串拼接成一个字符串进行sha1加密
